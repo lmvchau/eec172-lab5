@@ -85,10 +85,21 @@ int http_post(int iTLSSockID, const char *message){
         "{"
             "\"state\": {"
                 "\"desired\" : {"
-                    "\"var\" : \"%s\""
+                     "\"var\" : \"%s\","
+                     "\"status\": %d,"
+                     "\"name\": \"%s\","
+                     "\"hunger\": %d,"
+                     "\"heart\": %d,"
+                     "\"sleep\": %d"
                 "}"
             "}"
-        "}\r\n\r\n", message);
+        "}\r\n\r\n", message,
+        1,
+        "Boots",
+        80,
+        50,
+        10
+        );
 
 
     pcBufHeaders = acSendBuff;
