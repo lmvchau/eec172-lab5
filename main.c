@@ -83,6 +83,7 @@
 #include "common.h"
 #include "uart_if.h"
 #include "aws_http.h"
+#include "aws_sync.h"
 #include "gpio_if.h"
 #include "timer_if.h"
 #include "i2c_if.h"
@@ -182,6 +183,9 @@ volatile unsigned int ir_signal = 0;
 volatile unsigned int prev_signal = 0;
 volatile uint16_t bit_idx = 0;
 volatile uint8_t is_repeat = 0;
+
+volatile unsigned int flag_aws_sync = 0;
+int g_aws_sock = -1;
 
 typedef enum {
     IR_WAIT_START,
@@ -637,6 +641,20 @@ void main()
         UART_PRINT("Unable to set time in the device");
         LOOP_FOREVER();
     }
+    Report("Passed connectToAccessPoint() and set_time() :D\n\r");
+
+    // TLS connect
+    g_aws_sock = tls_connect();
+    if (g_aws_sock < 0){
+        ERR_PRINT(g_aws_sock);
+        LOOP_FOREVER();
+    }
+    Report("tls_connect() at the beginning successful! :D\n\r");
+
+
+    // Init TimerA1 for AWS IoT Shadow Synchronization
+    TimerA1_Init();
+    Report("INit TImerA1 Successful!:D) \n\r");
 
     int i;
     static char tx_buffer[MAX_MSG_LEN];
@@ -648,6 +666,7 @@ void main()
                 ir_intflag = 0;
 
                 if (bit_idx == 32) {
+                    Report("Decoded IR Signal successful!! :D\n\r");
                     // if signal ready, get button and
                     uint32_t button_digit = getButton();
 
@@ -672,7 +691,7 @@ void main()
                             c = c - 'A' + 'a';
                         }
 
-//                        Report("Typed: %c\n\r", c);  // for debugging
+                        Report("Typed: %c\n\r", c);  // for debugging
 
                         // draw it on the OLED
                         if (is_repeat) {
@@ -751,13 +770,18 @@ void main()
 
                         Report("Message sent.\n\r\n\r");
 
-                        int sock = tls_connect();
-                        if (sock >= 0){
-                            http_post(sock, tx_buffer);
-                            http_get(sock);
-                            sl_Close(sock);
-                        } else {
-                            ERR_PRINT(sock);
+//                        int sock = tls_connect();
+//                        if (sock >= 0){
+//                            http_post(sock, tx_buffer);
+//                            http_get(sock);
+//                            sl_Close(sock);
+//                        } else {
+//                            ERR_PRINT(sock);
+//                        }
+
+                        int success = UpdateAWS_Shadow(tx_buffer);
+                        if (success < 0){
+                            Report("UpdateAWS_SHadow not successful\n\r");
                         }
 
                         unsigned int clear_height = curY - 64 + 8;
@@ -845,6 +869,26 @@ void main()
                     else {
                         uart1_line[uart1_line_len++] = c;
                     }
+            }
+
+
+            if (flag_aws_sync){
+                // Clear flag to 0
+                flag_aws_sync = 0;
+
+                const char *test_message = "I eat cake";
+
+                if (UpdateAWS_Shadow(test_message) < 0 ){
+                    Report("Periodic sync failed: %d\n\r", g_aws_sock);
+                    sl_Close(g_aws_sock);
+//                    g_aws_sock = tls_connect();
+//                    if (g_aws_sock >= 0) {
+//                        UpdateAWS_Shadow(test_message);
+                } else {
+                    UART_PRINT("Periodic sync success!");
+                }
+
+
             }
         }
 
