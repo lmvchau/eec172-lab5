@@ -27,7 +27,8 @@ void TimerA1_Init(void);
  *         then do HTTP GET, close the socket
  *
  */
-int UpdateAWS_Shadow(const char *message);
+//int UpdateAWS_Shadow(const char *message);
+int UpdateAWS_Shadow(const PetState *pet);
 
 
 #endif /* AWS_SYNC_H_ */

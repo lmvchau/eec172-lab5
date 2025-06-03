@@ -12,6 +12,7 @@
 #include "simplelink.h"
 #include "hw_types.h"
 
+#include "pet_state.h"
 #include "aws_http.h"
 #include "aws_sync.h"
 #include "prcm.h"
@@ -28,11 +29,45 @@ extern int tls_connect(void);
 extern volatile unsigned int flag_aws_sync;
 extern int g_aws_sock;
 extern volatile uint32_t current_time_ms;
+extern PetState myPet;
 
 static volatile uint8_t thirty_second_ticks = 0;
 
 
-int UpdateAWS_Shadow(const char *message)
+//int UpdateAWS_Shadow(const char *message)
+//{
+//
+////    // Open a fresh TLS socket
+////    int sock = tls_connect();
+////    if (sock < 0){
+////        ERR_PRINT(sock);
+////        return -1
+////    }
+////
+////    if (http_post(sock, message) < 0 ){
+////        ERR_PRINT(ret);
+////        sl_Close(sock);
+////        return -1
+////    }
+//
+//    if (g_aws_sock < 0){
+//        ERR_PRINT(g_aws_sock);
+//        Report("boo hoo there is an error with g_aws_sock!!!! :C");
+//        return g_aws_sock;
+//    }
+//
+//
+//    if (http_post(g_aws_sock, message) < 0){
+////        sl_Close(g_aws_sock);
+//        return -1;
+//    }
+//
+////    sl_Close(g_aws_sock);
+//    return 0;
+//}
+
+
+int UpdateAWS_Shadow(const PetState *pet)
 {
 
 //    // Open a fresh TLS socket
@@ -55,7 +90,7 @@ int UpdateAWS_Shadow(const char *message)
     }
 
 
-    if (http_post(g_aws_sock, message) < 0){
+    if (http_post(g_aws_sock, pet) < 0){
 //        sl_Close(g_aws_sock);
         return -1;
     }
@@ -63,6 +98,7 @@ int UpdateAWS_Shadow(const char *message)
 //    sl_Close(g_aws_sock);
     return 0;
 }
+
 
 
 /**

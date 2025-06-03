@@ -82,6 +82,7 @@
 // Common interface include
 #include "common.h"
 #include "uart_if.h"
+#include "pet_state.h"
 #include "aws_http.h"
 #include "aws_sync.h"
 #include "gpio_if.h"
@@ -229,7 +230,8 @@ const char *ascii_art[] = {
 };
 
 
-
+PetState myPet;
+int petNameIndex = 0;
 
 //*****************************************************************************
 //                 GLOBAL VARIABLES -- End
@@ -656,6 +658,9 @@ void main()
     TimerA1_Init();
     Report("INit TImerA1 Successful!:D) \n\r");
 
+    init_pet_state(&myPet);
+    Report("ssuccessfully init myPet! :D)");
+
     int i;
     static char tx_buffer[MAX_MSG_LEN];
     static int  msg_len = 0;
@@ -664,7 +669,7 @@ void main()
     while (1) {
             if (ir_intflag) {
                 ir_intflag = 0;
-
+//                drawChar(50, 50, 'X', WHITE, BLACK, 4);
                 if (bit_idx == 32) {
                     Report("Decoded IR Signal successful!! :D\n\r");
                     // if signal ready, get button and
@@ -770,19 +775,15 @@ void main()
 
                         Report("Message sent.\n\r\n\r");
 
-//                        int sock = tls_connect();
-//                        if (sock >= 0){
-//                            http_post(sock, tx_buffer);
-//                            http_get(sock);
-//                            sl_Close(sock);
-//                        } else {
-//                            ERR_PRINT(sock);
+
+                        strncpy(myPet.name, tx_buffer, PET_NAME_MAX_LEN - 1);
+                        myPet.name[PET_NAME_MAX_LEN - 1] = '\0';  // ensure termination
+//                        int success = UpdateAWS_Shadow(tx_buffer);
+//                        if (success < 0){
+//                            Report("UpdateAWS_SHadow not successful\n\r");
 //                        }
 
-                        int success = UpdateAWS_Shadow(tx_buffer);
-                        if (success < 0){
-                            Report("UpdateAWS_SHadow not successful\n\r");
-                        }
+                        Report("Pet name is now: %s\n\r", myPet.name);
 
                         unsigned int clear_height = curY - 64 + 8;
                         if (clear_height > 0){
@@ -876,14 +877,11 @@ void main()
                 // Clear flag to 0
                 flag_aws_sync = 0;
 
-                const char *test_message = "I eat cake";
+                update_pet_state(&myPet);
 
-                if (UpdateAWS_Shadow(test_message) < 0 ){
+                if (UpdateAWS_Shadow(&myPet) < 0 ){
                     Report("Periodic sync failed: %d\n\r", g_aws_sock);
                     sl_Close(g_aws_sock);
-//                    g_aws_sock = tls_connect();
-//                    if (g_aws_sock >= 0) {
-//                        UpdateAWS_Shadow(test_message);
                 } else {
                     UART_PRINT("Periodic sync success!");
                 }
