@@ -13,10 +13,14 @@ ORDERED_OBJS += \
 "./Adafruit_GFX.obj" \
 "./Adafruit_OLED.obj" \
 "./aws_http.obj" \
+"./aws_sync.obj" \
 "./gpio_if.obj" \
+"./i2c_if.obj" \
 "./main.obj" \
 "./network_common.obj" \
 "./oled_test.obj" \
+"./pet_logic.obj" \
+"./pet_state.obj" \
 "./pin_mux_config.obj" \
 "./startup_ccs.obj" \
 "./timer_if.obj" \
@@ -135,21 +139,21 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXE_OUTPUTS += \
-lab5.out \
+eec172-lab5.out \
 
 EXE_OUTPUTS__QUOTED += \
-"lab5.out" \
+"eec172-lab5.out" \
 
 
 # All Target
 all: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
-	@$(MAKE) --no-print-directory -Onone "lab5.out"
+	@$(MAKE) --no-print-directory -Onone "eec172-lab5.out"
 
 # Tool invocations
-lab5.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
+eec172-lab5.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 	@echo 'Building target: "$@"'
 	@echo 'Invoking: Arm Linker'
-	"C:/ti/ccs1250/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=none -me -Ooff --define=ccs --define=cc3200 -g --diag_warning=225 --diag_wrap=off --display_error_number --abi=eabi -z -m"lab5.map" --heap_size=0x800 --stack_size=0x100 -i"C:/ti/ccs1250/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/lib" -i"C:/ti/ccs1250/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="lab5_linkInfo.xml" --rom_model -o "lab5.out" $(ORDERED_OBJS)
+	"C:/ti/ccs1250/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=none -me -Ooff --define=ccs --define=cc3200 -g --diag_warning=225 --diag_wrap=off --display_error_number --abi=eabi -z -m"eec172-lab5.map" --heap_size=0x800 --stack_size=0x100 -i"C:/ti/ccs1250/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/lib" -i"C:/ti/ccs1250/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="eec172-lab5_linkInfo.xml" --rom_model -o "eec172-lab5.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: "$@"'
 	@echo ' '
 	@$(MAKE) --no-print-directory post-build
@@ -157,13 +161,13 @@ lab5.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(EXE_OUTPUTS__QUOTED)
-	-$(RM) "Adafruit_GFX.obj" "Adafruit_OLED.obj" "aws_http.obj" "gpio_if.obj" "main.obj" "network_common.obj" "oled_test.obj" "pin_mux_config.obj" "startup_ccs.obj" "timer_if.obj" "uart_if.obj" "utils\network_utils.obj" 
-	-$(RM) "Adafruit_GFX.d" "Adafruit_OLED.d" "aws_http.d" "gpio_if.d" "main.d" "network_common.d" "oled_test.d" "pin_mux_config.d" "startup_ccs.d" "timer_if.d" "uart_if.d" "utils\network_utils.d" 
+	-$(RM) "Adafruit_GFX.obj" "Adafruit_OLED.obj" "aws_http.obj" "aws_sync.obj" "gpio_if.obj" "i2c_if.obj" "main.obj" "network_common.obj" "oled_test.obj" "pet_logic.obj" "pet_state.obj" "pin_mux_config.obj" "startup_ccs.obj" "timer_if.obj" "uart_if.obj" "utils\network_utils.obj" 
+	-$(RM) "Adafruit_GFX.d" "Adafruit_OLED.d" "aws_http.d" "aws_sync.d" "gpio_if.d" "i2c_if.d" "main.d" "network_common.d" "oled_test.d" "pet_logic.d" "pet_state.d" "pin_mux_config.d" "startup_ccs.d" "timer_if.d" "uart_if.d" "utils\network_utils.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 
 post-build:
-	-C:/ti/ccs1250/ccs/utils/tiobj2bin/tiobj2bin lab5.out lab5.bin C:/ti/ccs1250/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/bin/armofd C:/ti/ccs1250/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/bin/armhex C:/ti/ccs1250/ccs/utils/tiobj2bin/mkhex4bin
+	-C:/ti/ccs1250/ccs/utils/tiobj2bin/tiobj2bin eec172-lab5.out eec172-lab5.bin C:/ti/ccs1250/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/bin/armofd C:/ti/ccs1250/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/bin/armhex C:/ti/ccs1250/ccs/utils/tiobj2bin/mkhex4bin
 	-@echo ' '
 
 .PHONY: all clean dependents

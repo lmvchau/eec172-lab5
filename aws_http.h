@@ -8,6 +8,8 @@
 #ifndef AWS_HTTP_H_
 #define AWS_HTTP_H_
 
+#include "pet_state.h"
+
 //NEED TO UPDATE THIS FOR IT TO WORK!
 #define DATE                19    /* Current Date */
 #define MONTH               5     /* Month 1-12 */
@@ -42,7 +44,8 @@
             "}"                                                             \
         "}\r\n\r\n"
 
-int http_post(int iTLSSockID, const char *message);
+//int http_post(int iTLSSockID, const char *message);
+int http_post(int iTLSSockID, const PetState *pet);
 int http_get(int iTLSSockID);
 int set_time(void);
 

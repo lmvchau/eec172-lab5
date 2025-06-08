@@ -82,7 +82,10 @@
 // Common interface include
 #include "common.h"
 #include "uart_if.h"
+#include "pet_state.h"
+#include "pet_logic.h"
 #include "aws_http.h"
+#include "aws_sync.h"
 #include "gpio_if.h"
 #include "timer_if.h"
 #include "i2c_if.h"
@@ -113,6 +116,9 @@
 #define GREEN   0x07E0
 #define BLUE    0x001F
 #define YELLOW  0xFFE0
+#define PINK       0xFE19
+#define LIGHTGREEN 0x9772
+
 
 // the cc3200's fixed clock frequency of 80 MHz
 // note the use of ULL to indicate an unsigned long long constant
@@ -138,8 +144,6 @@
 #define MAX_STRING_LENGTH    80
 
 #define RX_BUFF_SIZE     128
-
-#define MAX_TAPS        5
 
 #define UART1_LINE_MAX 128
 
@@ -183,6 +187,9 @@ volatile unsigned int prev_signal = 0;
 volatile uint16_t bit_idx = 0;
 volatile uint8_t is_repeat = 0;
 
+volatile unsigned int flag_aws_sync = 0;
+int g_aws_sock = -1;
+
 typedef enum {
     IR_WAIT_START,
     IR_READING_BITS
@@ -212,9 +219,6 @@ char uart1_line[UART1_LINE_MAX];
 int uart1_line_len = 0;
 
 //cursor states
-int curX  = 0;
-int curY  = 64;
-int prevX = 0, prevY = 0;
 const int CHAR_W = 6, CHAR_H = 8;
 
 const char *ascii_art[] = {
@@ -225,7 +229,8 @@ const char *ascii_art[] = {
 };
 
 
-
+PetState myPet;
+int petNameIndex = 0;
 
 //*****************************************************************************
 //                 GLOBAL VARIABLES -- End
@@ -367,13 +372,13 @@ static void GPIOirHandler(void) {
             if (bit_idx < 32) {
                 // keep reading incoming bits
                 if (delta_us > 1000 && delta_us < 2000) {
-                    // logical â€œ0â€ if pulse width is ~1.12 ms
+                    // logical 0 if pulse width is ~1.12 ms
                     // bit shift left to insert 0
                     ir_signal <<= 1;
                     bit_idx++;
                 }
                 else if (delta_us > 2000 && delta_us < 3000) {
-                    // logical â€œ1â€ if pulse width is ~2.2 ms
+                    // logical 1 if pulse width is ~2.2 ms
                     // bit shift left and "OR" 1 to set LSB to 1
                     ir_signal = (ir_signal << 1) | 1;
                     bit_idx++;
@@ -492,6 +497,10 @@ uint8_t getButton(void){
         case 0x02FD08F7: return 11;    // MUTE
         case 0x02FDD827: return 13;    // CHANNEL+
         case 0x02FDF807: return 14;    // CHANNEL-
+//        case 0x02FDE21D: return 15;    // >
+//        case 0x02FD629D: return 16;    // <
+//        case 0x02FD01FE: return 17;    // OK
+
         default: return 12;  // unknown
     }
 }
@@ -637,221 +646,25 @@ void main()
         UART_PRINT("Unable to set time in the device");
         LOOP_FOREVER();
     }
+    Report("Passed connectToAccessPoint() and set_time() :D\n\r");
 
-    int i;
-    static char tx_buffer[MAX_MSG_LEN];
-    static int  msg_len = 0;
-    static int tap_count = 0;
-
-    while (1) {
-            if (ir_intflag) {
-                ir_intflag = 0;
-
-                if (bit_idx == 32) {
-                    // if signal ready, get button and
-                    uint32_t button_digit = getButton();
-
-                    if (button_digit <= 9 || button_digit == 13) {
-                        // update tap_count if digit button has been pressed repeatedly
-                        if (is_repeat) {
-                            tap_count++;
-                        } else {
-                            tap_count = 0;  // reset tap count if new key has been pressed
-                        }
-
-                        char c;
-                        // pick the character
-                        if (button_digit <= 9) {
-                            c = button_chars[button_digit]
-                                             [ tap_count % max_taps[button_digit] ];
-                        } else {
-                            c = button_chars[10][ tap_count % max_taps[10] ];  // special case for button_digit = 13
-                        }
-
-                        if (lowercaseNext && c >= 'A' && c <= 'Z'){
-                            c = c - 'A' + 'a';
-                        }
-
-//                        Report("Typed: %c\n\r", c);  // for debugging
-
-                        // draw it on the OLED
-                        if (is_repeat) {
-                            // use previous location
-                            drawChar(prevX, prevY, c, BLACK, BLACK, 1);
-                            drawChar(prevX, prevY, c, WHITE, BLACK, 1);
-                        } else {
-                            // use updated location
-                            drawChar(curX, curY, c, WHITE, BLACK, 1);
-                            prevX = curX;  prevY = curY;
-                            curX += CHAR_W;
-                            if (curX > 128 - CHAR_W) {
-                                curX = 0;  curY += CHAR_H;
-                            }
-                            if (curY > 127) {
-                                fillRect(0, 40, 128, 88, BLACK);
-                                curX = 0;  curY = 40;
-                            }
-                        }
-                        // draw vertical line in green for cursor
-                        fillRect(curX, curY, 1, CHAR_H, GREEN);
+    // TLS connect
+    g_aws_sock = tls_connect();
+    if (g_aws_sock < 0){
+        ERR_PRINT(g_aws_sock);
+        LOOP_FOREVER();
+    }
+    Report("tls_connect() at the beginning successful! :D\n\r");
 
 
-                        // append to tx_buffer
-                        if (msg_len < MAX_MSG_LEN - 1) {
-                            if (is_repeat && msg_len > 0){
-                                msg_len--;
+    // Init TimerA1 for AWS IoT Shadow Synchronization
+    TimerA1_Init();
+    Report("INit TImerA1 Successful!:D) \n\r");
 
-                            }
-                            tx_buffer[msg_len++] = c;
-                            tx_buffer[msg_len]   = '\0';
-                        }
-                    }
-                    else if (button_digit == 10){
-                        // LAST / DELETE
-                        if (msg_len > 0){
-                            Report("Delete\n\r");
+    init_pet_state(&myPet);
+    Report("ssuccessfully init myPet! :D)");
 
-                            // fill green cursor with black to delete
-                            fillRect(curX, curY, 1, CHAR_H, BLACK);
-
-                            // go back 1 character's worth (a CHAR_W x CHAR_H block) , and update current position
-                            if (curX == 0) {
-                                curY -= CHAR_H;
-                                curX = 128 - CHAR_W;
-                            }
-                            else {
-                                curX -= CHAR_W;
-                            }
-                            // fill next CHAR_W x CHAR_H block in BLACK to "delete"
-                            fillRect(curX, curY, CHAR_W, CHAR_H, BLACK);
-
-                            // fill new location with green vertical line for updated cursor
-                            fillRect(curX, curY, 1, CHAR_H, GREEN);
-
-                            // remove last appended character for tx buffer by replacing with '\0'
-                            msg_len--;
-                            tx_buffer[msg_len] = '\0';
-
-                            // update previous position
-                            prevX = curX;
-                            prevY = curY;
-                        }
-
-                    }
-
-                    else if (button_digit == 11) {
-                        Report("\nSending message: \"%s\"\n\r", tx_buffer);
-                        // MUTE pressed -> send the composed string over UART1
-                        for (i = 0; i < msg_len; i++) {
-                            MAP_UARTCharPut(UARTA1_BASE, tx_buffer[i]);
-                        }
-                        // optional line ending
-//                        MAP_UARTCharPut(UARTA1_BASE, '\r');
-                        MAP_UARTCharPut(UARTA1_BASE, '\n');
-
-                        Report("Message sent.\n\r\n\r");
-
-                        int sock = tls_connect();
-                        if (sock >= 0){
-                            http_post(sock, tx_buffer);
-                            http_get(sock);
-                            sl_Close(sock);
-                        } else {
-                            ERR_PRINT(sock);
-                        }
-
-                        unsigned int clear_height = curY - 64 + 8;
-                        if (clear_height > 0){
-                            fillRect(0, 64, 128, clear_height, BLACK);
-                        }
-                        curX = 0;
-                        curY = 64;
-
-                        // clear for next message
-                        msg_len = 0;
-                        tx_buffer[0] = '\0';
-
-
-                    }
-                    // CH- button pressed
-                    else if (button_digit == 14){
-                        // toggle globally declared flag
-                        if (lowercaseNext == 0){
-                            lowercaseNext = 1;
-                        } else if (lowercaseNext == 1) {
-                            lowercaseNext = 0;
-                        }
-                        // reset ir_intflag and bit_idx to get ready for next button press
-                        ir_intflag = 0;
-                        bit_idx = 0;
-                    }
-
-                    // reset for next IR frame
-                    bit_idx = 0;
-                }
-            }
-
-            // 2. Handle UART1 receive
-            while (uart1_rx_tail != uart1_rx_head) {
-                char c = uart1_rx_buffer[uart1_rx_tail];
-                uart1_rx_tail = (uart1_rx_tail + 1) % RX_BUFF_SIZE;
-
-                // If newline received or line is full, print the line
-                    if (c == '\n'|| c == '\r' || uart1_line_len >= UART1_LINE_MAX - 1) {
-
-                        while (uart1_line_len > 0 &&
-                                   (uart1_line[uart1_line_len - 1] == '\r' ||
-                                    uart1_line[uart1_line_len - 1] == '\n')) {
-                                uart1_line_len--;
-                            }
-
-                        uart1_line[uart1_line_len] = '\0';  // null-terminate
-
-                        // Print to UART0 console
-                        Report("Received: %s\r\n", uart1_line);
-
-                        fillRect(0, 0, 128, 64, BLACK);
-
-                        if (strstr(uart1_line, ":)")){
-                            Report("YOU'VE DISCOVERED AN ELUSIVE, RARE CAT!\r\n");
-//                            Report("_._     _,-'""`-._\r\n");
-//                            Report("(,-.\\._,'(       /\\`-/|\r\n");
-//                            Report("    `-.-' \\ )-`( , o o)\r\n");
-//                            Report("          `-    \\`_`'''-\r\n");
-                            drawAsciiArt(0, 0);
-                        }
-
-                        else {
-                            char receivedMsg[140];
-                            snprintf(receivedMsg, sizeof(receivedMsg), "Received: %s", uart1_line);
-
-
-                            // Print to OLED (you can choose y position, here y=0 for top)
-                            int rxX = 0, rxY = 8;
-                            char *ptr = receivedMsg;
-                            while (*ptr) {
-                                drawChar(rxX, rxY, *ptr++, WHITE, BLACK, 1);
-                                rxX += 6;
-                                if (rxX > 128 - 6) {
-                                    rxX = 0;
-                                    rxY += 8;
-                                }
-                            }
-                        }
-
-
-                        uart1_line_len = 0;
-                    }
-                    else {
-                        uart1_line[uart1_line_len++] = c;
-                    }
-            }
-        }
-
-
-
-
-
+    pet_logic_main();
 
 
 }

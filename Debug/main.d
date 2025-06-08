@@ -52,14 +52,18 @@ main.obj: C:/ti/CC3200SDK_1.5.0/cc3200-sdk/simplelink/include/wlan_rx_filters.h
 main.obj: C:/ti/CC3200SDK_1.5.0/cc3200-sdk/simplelink/source/nonos.h
 main.obj: C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/common.h
 main.obj: C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/uart_if.h
-main.obj: ../aws_http.h
-main.obj: C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/gpio_if.h
-main.obj: C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/timer_if.h
-main.obj: C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/i2c_if.h
+main.obj: ../pet_state.h
+main.obj: ../pet_logic.h
 main.obj: ../Adafruit_GFX.h
 main.obj: ../Adafruit_SSD1351.h
-main.obj: ../glcdfont.h
+main.obj: C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/i2c_if.h
+main.obj: C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/gpio_if.h
 main.obj: ../oled_test.h
+main.obj: ../aws_http.h
+main.obj: ../aws_sync.h
+main.obj: C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/timer_if.h
+main.obj: ../Adafruit_SSD1351.h
+main.obj: ../glcdfont.h
 main.obj: ../utils/network_utils.h
 
 ../main.c:
@@ -166,21 +170,29 @@ C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/common.h:
 
 C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/uart_if.h:
 
-../aws_http.h:
+../pet_state.h:
 
-C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/gpio_if.h:
-
-C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/timer_if.h:
-
-C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/i2c_if.h:
+../pet_logic.h:
 
 ../Adafruit_GFX.h:
 
 ../Adafruit_SSD1351.h:
 
-../glcdfont.h:
+C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/i2c_if.h:
+
+C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/gpio_if.h:
 
 ../oled_test.h:
+
+../aws_http.h:
+
+../aws_sync.h:
+
+C:/ti/CC3200SDK_1.5.0/cc3200-sdk/example/common/timer_if.h:
+
+../Adafruit_SSD1351.h:
+
+../glcdfont.h:
 
 ../utils/network_utils.h:
 
